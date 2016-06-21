@@ -1,0 +1,87 @@
+<html>
+<head>
+<style>
+canvas {
+    border:1px solid #d3d3d3;
+    background-color: #f1f1f1;
+}
+</style>
+<title> The Tony Abbot Chronicles: Attack of the Boat People </title>
+</head>
+<body>
+ 
+<script>
+//
+var SCREEN_WIDTH = 1300;
+var SCREEN_HEIGHT = 600;
+var TICK_SPEED = 1;
+function component(width, height, color, x, y,speed) {
+    this.width = width;
+    this.height = height;
+	this.speed = speed;
+    this.x = x;
+    this.y = y; 
+	this.image = new Image();
+    ctx = myGameArea.context;
+	if(color != 0)
+	{
+    ctx.fillStyle = color;
+    ctx.fillRect(this.x, this.y, this.width, this.height);
+	}
+    this.update = function(){
+        ctx = myGameArea.context;
+       // ctx.fillStyle = color;
+        //ctx.fillRect(this.x, this.y, this.width, this.height);
+		}
+		ctx.drawImage(this.image,this.x,this.y,this.width,this.height);
+
+    }
+	
+//var bullet_sprite
+var myGamePiece = new Array();
+var ticks = 0;
+//var bullet = new component(10,10,"black",0,0,0,0)
+function updateGameArea() {
+
+    myGameArea.clear();
+	ticks += 5
+    if (myGameArea.keys && myGameArea.keys[37])  {}
+    if (myGameArea.keys && myGameArea.keys[39]){}
+    if (myGameArea.keys && myGameArea.keys[38]) {}
+    if (myGameArea.keys && myGameArea.keys[40]) {}
+	if(myGameArea.keys && myGameArea.keys[32]) 
+	{}
+}
+
+var myGameArea = {
+    canvas : document.createElement("canvas"),
+    start : function() {
+        this.canvas.width = SCREEN_WIDTH;
+        this.canvas.height = SCREEN_HEIGHT;
+        this.context = this.canvas.getContext("2d");
+        document.body.insertBefore(this.canvas, document.body.childNodes[0]);
+        this.interval = setInterval(updateGameArea, TICK_SPEED);
+        window.addEventListener('keydown', function (e) {
+            myGameArea.keys = (myGameArea.keys || []);
+            myGameArea.keys[e.keyCode] = true;
+        })
+        window.addEventListener('keyup', function (e) {
+            myGameArea.keys[e.keyCode] = false; 
+        })
+    },
+    clear : function() {
+        this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    }
+}
+
+
+
+function startGame() {
+    myGameArea.start();
+}
+
+startGame();
+</script>
+
+</body>
+</html>
