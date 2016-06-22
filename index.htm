@@ -15,6 +15,8 @@ canvas {
 var GRASS = 0;
 var active_map_piece = new Array();
 var tile_array = new Array();
+var axe_img = new Image()
+axe_img.src = "./images/parts/weapons/axe.png"
 var orc_body_part = new Array();
 orc_body_part[0] = new Image();
 orc_body_part[0].src = "./images/parts/orc_body.png"
@@ -25,12 +27,13 @@ tile_array[0].src = "./images/tiles/grass_tile.png";
 var curr_map_array = new Array();
 var OVER_WORLD = 0;
 
-function person_build(top_part,bottom_part,x,y)
+function person_build(top_part,bottom_part,x,y,weapon)
 {
 	this.bottom_offset = bottom_part.height;
 	this.bottom = bottom_part;
 	this.x = x;
 	this.y = y;
+	this.weapon = weapon;
 	this.top = top_part;
 	this.move_piece = function(x_mov,y_mov)
 	{
@@ -38,16 +41,31 @@ function person_build(top_part,bottom_part,x,y)
 		this.top.x = x_mov;
 		this.bottom.y = y_mov + this.bottom_offset;
 		this.top.y = y_mov;
+		this.weapon.x = x_mov + 19;
+		this.weapon.y = y_mov;
+	}
+	this.update = function()
+	{
+		this.weapon.update();
+		this.top.update();
+		this.bottom.update();
 	}
 }
 
 var player;
 
+function weapon(pixel_offset,core)
+{
+	this.core = core;
+	this.off_set = pixel_offset;
+}
+
 function create_player()
 {
+	var axe = new component(32,32,0,0,0,axe_img,0)
 	var player_top = new component(32,32,0,0,0,orc_body_part[0],0);
 	var player_bottom = new component(32,32,0,0,0,orc_body_part[1],0);
-	player = new person_build(player_top,player_bottom,1,1);
+	player = new person_build(player_top,player_bottom,1,1,axe);
 }
 
 function tile(village,x,y,type)
@@ -149,9 +167,8 @@ function updateGameArea()
 		if (myGameArea.keys && myGameArea.keys[40] || myGameArea.keys && myGameArea.keys[83]) {player.y++} //DOWN/S
 		last_press = ticks;
 	}
-	player.move_piece(player.x * 64 + 30,player.y * 64 + 64);
-	player.top.update();
-	player.bottom.update();
+	player.move_piece(player.x * 64 + 15,player.y * 64 + 64);
+	player.update()
 }
 
 var myGameArea = {
