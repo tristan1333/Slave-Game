@@ -15,10 +15,40 @@ canvas {
 var GRASS = 0;
 var active_map_piece = new Array();
 var tile_array = new Array();
+var orc_body_part = new Array();
+orc_body_part[0] = new Image();
+orc_body_part[0].src = "./images/parts/orc_body.png"
+orc_body_part[1] = new Image();
+orc_body_part[1].src = "./images/parts/orc_legs.png"
 tile_array[0] = new Image();
 tile_array[0].src = "./images/tiles/grass_tile.png";
 var curr_map_array = new Array();
 var OVER_WORLD = 0;
+
+function person_build(top_part,bottom_part,x,y)
+{
+	this.bottom_offset = bottom_part.height;
+	this.bottom = bottom_part;
+	this.x = x;
+	this.y = y;
+	this.top = top_part;
+	this.move_piece = function(x_mov,y_mov)
+	{
+		this.bottom.x = x_mov;
+		this.top.x = x_mov;
+		this.bottom.y = y_mov + this.bottom_offset;
+		this.top.y = y_mov;
+	}
+}
+
+var player;
+
+function create_player()
+{
+	var player_top = new component(32,32,0,0,0,orc_body_part[0],0);
+	var player_bottom = new component(32,32,0,0,0,orc_body_part[1],0);
+	player = new person_build(player_top,player_bottom,1,1);
+}
 
 function tile(village,x,y,type)
 {
@@ -60,15 +90,15 @@ function draw_map(mtd)
 	active_map_piece = [];
 	for(i = 0; i < mtd.tiles.length; i++)
 	{
-		var x_val = mtd.tiles[i].x * 64 + SCREEN_WIDTH / 2 - 64 * mtd.width;
-		var y_val = mtd.tiles[i].y * 64 -60;
+		var x_val = mtd.tiles[i].x * 64 - 64;
+		var y_val = mtd.tiles[i].y * 64 - 64;
 		active_map_piece[i] = new component(64,64,0,x_val,y_val,mtd.tiles[i].type,0)
 	}
 }
 
 var mode = 0;
 var SCREEN_WIDTH = 1200;
-var SCREEN_HEIGHT = 1000;
+var SCREEN_HEIGHT = 600;
 var TICK_SPEED = 1;
 var ticks = 0;
 var active_components = new Array()
@@ -102,23 +132,26 @@ function component(width, height, color, x, y,sprite,speed) {
 }
 var myGamePiece = new Array();
 var mode = OVER_WORLD;
+var last_press = 0;
 function updateGameArea() 
 {
 	myGameArea.clear();
-	//if(mode == OVER_WORLD)
-	//{
 	for(i = 0; i < active_map_piece.length; i++)
 	{
 		active_map_piece[i].update();
 	}
-	//}
-	
 	ticks += 5;
-    /*if (myGameArea.keys && myGameArea.keys[37] || myGameArea.keys && myGameArea.keys[65])  {}
-    if (myGameArea.keys && myGameArea.keys[39] || myGameArea.keys && myGameArea.keys[68]){}
-    if (myGameArea.keys && myGameArea.keys[38] || myGameArea.keys && myGameArea.keys[87]) {}
-    if (myGameArea.keys && myGameArea.keys[40] || myGameArea.keys && myGameArea.keys[83]) {}
-	if(myGameArea.keys && myGameArea.keys[32]) {}*/
+	if(last_press + 100 < ticks)
+	{
+		if (myGameArea.keys && myGameArea.keys[37] || myGameArea.keys && myGameArea.keys[65])  {player.x--} //LEFT/A
+		if (myGameArea.keys && myGameArea.keys[39] || myGameArea.keys && myGameArea.keys[68]){player.x++} //RIGHT/D
+		if (myGameArea.keys && myGameArea.keys[38] || myGameArea.keys && myGameArea.keys[87]) {player.y--} //UP/W
+		if (myGameArea.keys && myGameArea.keys[40] || myGameArea.keys && myGameArea.keys[83]) {player.y++} //DOWN/S
+		last_press = ticks;
+	}
+	player.move_piece(player.x * 64 + 30,player.y * 64 + 64);
+	player.top.update();
+	player.bottom.update();
 }
 
 var myGameArea = {
@@ -129,6 +162,7 @@ var myGameArea = {
         this.context = this.canvas.getContext("2d");
         document.body.insertBefore(this.canvas, document.body.childNodes[0]);
         this.interval = setInterval(updateGameArea, TICK_SPEED);
+		create_player();
         window.addEventListener('keydown', function (e) {
             myGameArea.keys = (myGameArea.keys || []);
             myGameArea.keys[e.keyCode] = true;
