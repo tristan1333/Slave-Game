@@ -68,12 +68,8 @@ function create_player()
 	player = new person_build(player_top,player_bottom,1,1,axe);
 }
 
-function tile(village,x,y,type)
+function tile(x,y,type)
 {
-		if(village)
-		{
-			//GENERATE VILLAGE
-		}
 		this.x = x;
 		this.y = y;
 		this.type = tile_array[type];
@@ -93,7 +89,7 @@ function map(width,height)
 		{
 				has_vil = true;
 		}
-		this.tiles[i] = new tile(has_vil,x,y,GRASS);
+		this.tiles[i] = new tile(x,y,GRASS);
 		if(x == width)
 		{
 			y++;
@@ -110,13 +106,13 @@ function draw_map(mtd)
 	{
 		var x_val = mtd.tiles[i].x * 64 - 64;
 		var y_val = mtd.tiles[i].y * 64 - 64;
-		active_map_piece[i] = new component(64,64,0,x_val,y_val,mtd.tiles[i].type,0)
+		active_map_piece[i] = new component(64,64,0,x_val,y_val,tile_array[GRASS],0)
 	}
 }
 
 var mode = 0;
 var SCREEN_WIDTH = 1200;
-var SCREEN_HEIGHT = 600;
+var SCREEN_HEIGHT = 700;
 var TICK_SPEED = 1;
 var ticks = 0;
 var active_components = new Array()
@@ -167,7 +163,7 @@ function updateGameArea()
 		if (myGameArea.keys && myGameArea.keys[40] || myGameArea.keys && myGameArea.keys[83]) {player.y++} //DOWN/S
 		last_press = ticks;
 	}
-	player.move_piece(player.x * 64 + 15,player.y * 64 + 64);
+	player.move_piece(player.x * 64 -50,player.y * 64 - 60);
 	player.update()
 }
 
@@ -177,6 +173,7 @@ var myGameArea = {
         this.canvas.width = SCREEN_WIDTH;
         this.canvas.height = SCREEN_HEIGHT;
         this.context = this.canvas.getContext("2d");
+		this.context.imageSmoothingEnabled = false;
         document.body.insertBefore(this.canvas, document.body.childNodes[0]);
         this.interval = setInterval(updateGameArea, TICK_SPEED);
 		create_player();
