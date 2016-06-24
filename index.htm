@@ -36,13 +36,17 @@ var orc_body = new Array();
 var orc_lower = new Array();
 var orc_head = new Array();
 orc_body[0] = new Image();
-orc_body[0].src = "./images/parts/orc_body.png";
+orc_body[0].src = "./images/parts/body_parts/orc/orc_body.png";
+orc_body[1] = new Image();
+orc_body[1].src = "./images/parts/body_parts/orc/orc_body_sash.png"
 orc_lower[0] = new Image();
-orc_lower[0].src = "./images/parts/orc_legs.png";
+orc_lower[0].src = "./images/parts/body_parts/orc/orc_legs.png";
 orc_lower[1] = new Image();
-orc_lower[1].src = "./images/parts/orc_legs_tunic.png";
+orc_lower[1].src = "./images/parts/body_parts/orc/orc_legs_tunic.png";
 orc_head[0] = new Image();
-orc_head[0].src = "./images/parts/orc_hair.png";
+orc_head[0].src = "./images/parts/body_parts/orc/orc_hair.png";
+orc_head[1] = new Image();
+orc_head[1].src = "./images/parts/body_parts/orc/orc_bandana.png";
 tile_array[0] = new Image();
 tile_array[0].src = "./images/tiles/grass_tile.png";
 tile_array[1] = new Image();
@@ -67,7 +71,7 @@ function person_build(top_part,bottom_part,head,x,y,weapon)
 		this.top.y = y_mov;
 		this.weapon.x = x_mov + this.weapon.width/1.8;
 		this.weapon.y = y_mov - this.weapon.height/10;
-		this.head.x = x_mov - this.head.width/3;
+		this.head.x = x_mov - this.head.width/4;
 		this.head.y = y_mov - this.head.height/6;
 	}
 	this.update = function()
@@ -96,10 +100,10 @@ function weapon(pixel_offset,core)
 
 function create_player(weapon,width,height)
 {
-	var axe = new component(width,height,0,0,0,axe_img,0)
+	var axe = new component(width,height,0,0,0,axe_img,0);
 	var player_top = new component(width,height,0,0,0,orc_body[body],0);
 	var player_bottom = new component(width,height,0,0,0,orc_lower[lower],0);
-	var player_head = new component(width,height,0,0,0,orc_head[head],0)
+	var player_head = new component(width,height,0,0,0,orc_head[head],0);
 	var build_player = new person_build(player_top,player_bottom,player_head,1,1,axe);
 	player = new new_player(build_player,1,1); // Find Coordinates of both objects. Determine distance between each.( Distance Formula). Determine direction, (Tan theta). Determine coordinates surrounding points. Draw line to original point. if hit surrounding points :D
 }
@@ -256,7 +260,6 @@ function updateGameArea()
 		}
 		player.build.update();
 	}
-
 }
 
 function check_array(achk,x,y)
@@ -278,6 +281,42 @@ function getMousePos(event)
 	if(mode == CHARACTER_CREATION)
 	{
 		var selected = check_array(arrows,x,y);
+		if(selected == 0)
+		{
+			head--;
+			if(head < 0)
+			{
+				head = orc_head.length - 1;
+			}
+			player.build.head.imagge = orc_head[head];
+		}
+		if(selected == 1)
+		{
+			head++;
+			if(head == orc_head.length)
+			{
+				head = 0;
+			}
+			player.build.head.imagge = orc_head[head];
+		}
+		if(selected == 2)
+		{
+			body--;
+			if(body < 0)
+			{
+				body = orc_body.length - 1;
+			}
+			player.build.top.imagge = orc_body[body];
+		}
+		if(selected == 3)
+		{
+			body++;
+			if(body == orc_body.length)
+			{
+				body = 0;
+			}
+			player.build.top.imagge = orc_body[body];
+		}
 		if(selected == 4)
 		{
 			lower--;
@@ -325,17 +364,14 @@ var myGameArea = {
     }
 }
 
-
-
 function startGame() {
     myGameArea.start();
 	//myGamePiece[1] = new component(30,30,"blue",100,200,false);
 	//myGamePiece[2] = new component(30, 30, "red", 10, 300,false);
 	//myGamePiece[3] = new component(30, 30, "red", 10, 300,false);
 }
-
 startGame();
-</script>
 
+</script>
 </body>
 </html>
