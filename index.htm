@@ -1,21 +1,45 @@
 <html>
 <head>
 <style>
-canvas {
-    border:1px solid #d3d3d3;
-    background-color: #f1f1f1;
-}
+
 </style>
 <title></title>
 </head>
 <body>
  
 <script>
+/*
+canvas {
+    border:1px solid #d3d3d3;
+    background-color: #f1f1f1;
+}
+*/
 //Globals
+
+function mouse_piece(x,y,w,h) //Used to define parts where the mouse can be clicked and reacted to. Could be put inside components, but meh. 
+{
+	this.x = x;
+	this.y = y;
+	this.width = w;
+	this.height = h;
+	this.Collide = function(x,y) //x and y of mouse co-ordinates, compare them against this. Return true if clicked, false if not.
+	{
+		if(x < this.x + this.width && x > this.x && y < this.y + this.height && y > this.y)
+		{
+			return true;
+		}
+		return false;
+	}	
+}
+//A list of resources, variables, and the like which are utilised globally.
 var body = 0;
 var head = 0;
 var lower = 0;
+var CLICK_BAG = 0;
+var CLICK_SCROLL = 1;
 var CHARACTER_CREATION = 1;
+var INVENTORY = 2;
+var INFORMATION = 3;
 var GRASS = 0;
 var GRASS_TACTICAL = 1;
 var ARROW_LEFT = 0;
@@ -25,36 +49,64 @@ var SCREEN_HEIGHT = 700;
 var active_map_piece = new Array();
 var tile_array = new Array();
 var axe_img = new Image();
+var PLAIN = 1;
+var VILLAGE = 2;
+var MOUNTAIN = 3;
+var FOREST = 4;
+var CASTLE = 5;
+var mouse_pieces = new Array();
 
 axe_img.src = "./images/parts/weapons/axe.png";
+
 var ui_elements = new Array()
 ui_elements[0] = new Image();
 ui_elements[0].src = "./images/ui_elements/arrow_left.png";
 ui_elements[1] = new Image();
 ui_elements[1].src = "./images/ui_elements/arrow_right.png";
+ui_elements[2] = new Image();
+ui_elements[2].src = "./images/ui_elements/scroll.png";
+ui_elements[3] = new Image();
+ui_elements[3].src = "./images/ui_elements/bag.png";
+
 var orc_body = new Array();
 var orc_lower = new Array();
 var orc_head = new Array();
+
 orc_body[0] = new Image();
 orc_body[0].src = "./images/parts/body_parts/orc/orc_body.png";
 orc_body[1] = new Image();
 orc_body[1].src = "./images/parts/body_parts/orc/orc_body_sash.png"
+
 orc_lower[0] = new Image();
 orc_lower[0].src = "./images/parts/body_parts/orc/orc_legs.png";
 orc_lower[1] = new Image();
 orc_lower[1].src = "./images/parts/body_parts/orc/orc_legs_tunic.png";
+
 orc_head[0] = new Image();
 orc_head[0].src = "./images/parts/body_parts/orc/orc_hair.png";
 orc_head[1] = new Image();
 orc_head[1].src = "./images/parts/body_parts/orc/orc_bandana.png";
+
 tile_array[0] = new Image();
 tile_array[0].src = "./images/tiles/grass_tile.png";
 tile_array[1] = new Image();
 tile_array[1].src = "./images/tiles/grass_tile_tactical.png";
+
+var icon_array = new Array();
+icon_array[VILLAGE] = new Image();
+icon_array[VILLAGE].src = "./images/tiles/overlays/village.png";
+icon_array[MOUNTAIN] = new Image();
+icon_array[MOUNTAIN].src = "./images/tiles/overlays/mountain.png";
+icon_array[FOREST] = new Image();
+icon_array[FOREST].src = "./images/tiles/overlays/tree.png";
+icon_array[CASTLE] = new Image();
+icon_array[CASTLE].src = "./images/tiles/overlays/castle.png";
+
 var curr_map_array = new Array();
 var OVER_WORLD = 0;
+//END THE GLOBAL VARIABLES
 
-function person_build(top_part,bottom_part,head,x,y,weapon)
+function person_build(top_part,bottom_part,head,x,y,weapon) //Used to actually build the player model. Uses magic and dodgy math.
 {
 	this.bottom_offset = bottom_part.height;
 	this.bottom = bottom_part;
@@ -74,7 +126,7 @@ function person_build(top_part,bottom_part,head,x,y,weapon)
 		this.head.x = x_mov - this.head.width/4;
 		this.head.y = y_mov - this.head.height/6;
 	}
-	this.update = function()
+	this.update = function() //Calls the update of each component to actually display them. 
 	{
 		this.weapon.update();
 		this.top.update();
@@ -83,22 +135,35 @@ function person_build(top_part,bottom_part,head,x,y,weapon)
 	}
 }
 
-function new_player(player_build,x,y)
+function new_player(player_build,x,y) //Stores data revalent to the player. Should be used later to add slave storage and inventory. 
 {
 		this.x = x;
 		this.y = y;
 		this.build = player_build;
+		this.slaves = new Array()
+		this.addSlave = function(slave)
+		{
+			if(slave.length)
+			{
+				for(i = 0; i < slave.length; i++)
+				{
+					this.slaves.push(slave[i]);
+					return;
+				}
+			}
+			this.slaves.push(slave)
+		}
 }
 
-var player;
+var player; //Pretty sure this get's used later on
 
-function weapon(pixel_offset,core)
+function weapon(pixel_offset,core) //Used for defining what a weapon looks like
 {
 	this.core = core;
 	this.off_set = pixel_offset;
 }
 
-function create_player(weapon,width,height)
+function create_player(weapon,width,height) //Used to create a player. 
 {
 	var axe = new component(width,height,0,0,0,axe_img,0);
 	var player_top = new component(width,height,0,0,0,orc_body[body],0);
@@ -108,28 +173,142 @@ function create_player(weapon,width,height)
 	player = new new_player(build_player,1,1); // Find Coordinates of both objects. Determine distance between each.( Distance Formula). Determine direction, (Tan theta). Determine coordinates surrounding points. Draw line to original point. if hit surrounding points :D
 }
 
-function tile(x,y,type)
+function person(priority) //Creates a generic person. Priority determines if they are more valuable.
+{
+	this.gender = Math.floor((Math.random() * 2) + 1);
+	if(this.gender == 1)
+	{
+		this.gender = true;
+		this.strength = Math.floor((Math.random() * 5) + 1);
+		this.toughness = Math.floor((Math.random() * 3) + 1);
+		this.beauty = Math.floor((Math.random() * 3) + 1);
+	}
+	else
+	{
+		this.gender = false;
+		this.strength = Math.floor((Math.random() * 3) + 1);
+		this.toughness = Math.floor((Math.random() * 3) + 1);
+		this.beauty = Math.floor((Math.random() * 5) + 1);
+	}
+	if(priority)
+	{
+		this.strength = Math.floor((Math.random() * 9) + 3);
+		this.toughness = Math.floor((Math.random() * 9) + 3);
+		this.beauty = Math.floor((Math.random() * 9) + 3);
+	}
+	this.calc_avg_value = function ()
+	{
+		if(gender)
+		{
+			var times_value = this.toughess/2 + this.strength;
+			var oth_value = this.beauty * 10;
+			this.avg_value = Math.floor(50 * times_value + oth_value); 
+		}
+		else
+		{
+			var times_value = 10 * this.beauty;
+			var oth_value = this.strength/2 + this.toughness/2 * 5;
+			this.avg_value = Math.floor(times_value + oth_value);
+		}
+	}
+}
+
+function village() //Creates a village which is stored inside a tiles loc_dets
+{
+	this.population = Math.floor((Math.random() * 1000) + 100); 
+	this.wealth = Math.floor((Math.random() * 10) + 1);
+	this.guards = Math.round(this.population/Math.floor((Math.random() * 5)) - this.wealth);
+	var priority_targets = Math.floor((Math.random() * 10) + 1);
+	this.priority = new Array();
+	for(counter = 0;counter != priority_targets;counter++)
+	{
+		this.priority[counter] = new person(true);
+	}
+}
+
+function loc_dets(loc_type)  //Contains details about the location. If it is a village, it will store revelant information to being a village.
+{
+	this.loc_type = loc_type;
+	this.rep_icon;
+	this.active_piece = false;
+	if(this.loc_type == VILLAGE)
+	{	
+		this.loc_data = new village();
+		this.active_piece = true;
+		this.rep_icon = new component(32,32,0,0,0,icon_array[VILLAGE],0);
+	}
+	if(this.loc_type == MOUNTAIN)
+	{
+		this.active_piece = true;
+		this.rep_icon = new component(32,32,0,0,0,icon_array[MOUNTAIN],0);
+	}
+	if(this.loc_type == FOREST)
+	{
+		this.active_piece = true;
+		this.rep_icon = new component(32,32,0,0,0,icon_array[FOREST],0);
+	}
+	if(this.loc_type == CASTLE)
+	{
+		this.active_piece = true;
+		this.rep_icon = new component(32,32,0,0,0,icon_array[CASTLE],0);
+	}
+}
+
+function tile(x,y,type,type_ref) //A base tile. Place these on the map.
 {
 		this.x = x;
 		this.y = y;
 		this.type = tile_array[type];
+		this.ref = type_ref;
+		this.loc_info;
+		if(this.ref == VILLAGE)
+		
+		{
+			this.loc_info = new loc_dets(this.ref);
+		}
+		else if(this.ref == MOUNTAIN)
+		{
+			this.loc_info = new loc_dets(this.ref);
+		}
+		else if(this.ref == CASTLE)
+		{
+			this.loc_info = new loc_dets(this.ref);
+		}
+		else if(this.ref == FOREST)
+		{
+			this.loc_info = new loc_dets(this.ref);
+		}
+		else
+		{
+			this.loc_info = new loc_dets(PLAIN);
+		}
 }
 
-function map(width,height)
+function map(width,height) //A map built up of tiles.
 {
 	this.width = width;
 	this.height = height;
 	this.tiles = new Array();
 	var y = 1;
+	var castle = false;
 	var x = 1;
-	for(i = 0; y <= height;i++)
+	for(i = 0; y <= height;i++) //Creates the width and height.
 	{
-		var has_vil = false;
-		if((Math.floor(Math.random() * 1) + 6) == 6)
+		var type = ((Math.floor(Math.random() * 6) + 1));
+		if(type == CASTLE && !castle || type == VILLAGE && !castle)
 		{
-				has_vil = true;
+			castle = true;
+			while(type == CASTLE)
+			{
+				type = ((Math.floor(Math.random() * 6) + 1))
+			}
+
 		}
-		this.tiles[i] = new tile(x,y,GRASS);
+		this.tiles[i] = new tile(x,y,GRASS,type,castle);
+		if(type == CASTLE && castle)
+		{
+			castle = false;
+		}
 		if(x == width)
 		{
 			y++;
@@ -139,18 +318,18 @@ function map(width,height)
 	}
 }
 
-function draw_map(mtd)
+function draw_map(mtd) //Actually draws a map. 
 {
 	active_map_piece = [];
 	for(i = 0; i < mtd.tiles.length; i++)
 	{
 		var x_val = mtd.tiles[i].x * 64 - 64;
 		var y_val = mtd.tiles[i].y * 64 - 64;
-		active_map_piece[i] = new component(64,64,0,x_val,y_val,tile_array[GRASS],0)
+		active_map_piece[i] = new component(64,64,0,x_val,y_val,tile_array[GRASS],0);
 	}
 }
 
-/*
+/* FOR LATER USE
 function draw_map(mtd)
 {
 	active_map_piece = [];
@@ -162,7 +341,7 @@ function draw_map(mtd)
 	}
 }
 */
-
+//More globals
 var mode = 0;
 var TICK_SPEED = 1;
 var ticks = 0;
@@ -198,7 +377,7 @@ function arrow_group(x,y,rows,x_seperation,y_seperation)
 	}
 }
 
-function component(width, height, color, x, y,sprite,speed) {
+function component(width, height, color, x, y,sprite,speed) { //The base component. It is used to create images. 
     this.width = width;
     this.height = height;
 	this.speed = speed;
@@ -229,36 +408,124 @@ var myGamePiece = new Array();
 var mode = OVER_WORLD;
 var last_press = 0;
 var arrows;
-function updateGameArea() 
+var world_map;
+var gui_items;
+
+function over_world() //Draws the overworld and interacts accordingly. 
 {
-	ticks += 5;
-	if(mode == OVER_WORLD)
-	{
 		if(last_press + 100 < ticks)
 		{
-			if (myGameArea.keys && myGameArea.keys[37] || myGameArea.keys && myGameArea.keys[65])  {player.x--} //LEFT/A
-			if (myGameArea.keys && myGameArea.keys[39] || myGameArea.keys && myGameArea.keys[68]){player.x++} //RIGHT/D
-			if (myGameArea.keys && myGameArea.keys[38] || myGameArea.keys && myGameArea.keys[87]) {player.y--} //UP/W
-			if (myGameArea.keys && myGameArea.keys[40] || myGameArea.keys && myGameArea.keys[83]) {player.y++} //DOWN/S
+			if (player.x > 1 && myGameArea.keys && myGameArea.keys[37] || myGameArea.keys && player.x > 1 && myGameArea.keys[65])  {player.x--} //LEFT/A
+			if (player.x < world_map.width && myGameArea.keys && myGameArea.keys[39] || myGameArea.keys && player.x < world_map.width && myGameArea.keys[68]){player.x++} //RIGHT/D
+			if ( player.y > 1 && myGameArea.keys && myGameArea.keys[38] || myGameArea.keys && player.y > 1 && myGameArea.keys[87]) {player.y--} //UP/W
+			if (player.y < world_map.height && myGameArea.keys && myGameArea.keys[40] || myGameArea.keys && player.y < world_map.height && myGameArea.keys[83]) {player.y++} //DOWN/S
 			last_press = ticks;
 			myGameArea.clear()
 				for(i = 0; i < active_map_piece.length; i++)
 				{
 				active_map_piece[i].update();
+				if(world_map.tiles[i].loc_info.active_piece)
+					{
+					world_map.tiles[i].loc_info.rep_icon.x = active_map_piece[i].x;
+					world_map.tiles[i].loc_info.rep_icon.y = active_map_piece[i].y;
+					world_map.tiles[i].loc_info.rep_icon.update();
+					}
 				}
 			player.build.move_piece(player.x * 64 -50,player.y * 64 - 60);
 			player.build.update()
+			
+			//GUI CREATION
+			//CREATE GLOBAL GUI OPTIONS AT BOTTOM OF THE SCREEN_HEIGHT
+			//FIND LOCAL TILE WHICH THE PLAYER IS CURRENTLY STANDING ON
+			//FIND TYPE OF TILE AND CREATE GUI ACCORDINGINGLY 
+			for(i=0;i < gui_items.length;i++)
+			{
+				gui_items[i].update();
+			}
+			
 		}
-	}
-	if(mode == CHARACTER_CREATION)
-	{
-		player.build.move_piece(SCREEN_WIDTH/2 ,SCREEN_HEIGHT/2 - 188)
+}
+
+function char_creation() //Character creation screen. 
+{
+		player.build.move_piece(SCREEN_WIDTH/2 ,SCREEN_HEIGHT/2 - 188);
 		myGameArea.clear();
 		for(i = 0;i < arrows.arrows.length;i++)
 		{
 			arrows.arrows[i].update();;
 		}
 		player.build.update();
+		if(myGameArea.keys && myGameArea.keys[13])
+		{
+			world_map = new map(9,9);
+			mode = OVER_WORLD;
+			gui_items[0]= new component(64,64,0,SCREEN_WIDTH/30,SCREEN_HEIGHT/22 * 19,ui_elements[2],0);
+			gui_items[1] = new component(64,64,0,gui_items[0].x + 90,gui_items[0].y,ui_elements[3],0)
+			draw_map(world_map);
+			mouse_pieces.push(new mouse_piece(gui_items[1].x,gui_items[1].y,gui_items[1].width,gui_items[1].height))
+			mouse_pieces.push(new mouse_piece(gui_items[0].x,gui_items[0].y,gui_items[0].width,gui_items[0].height))
+			create_player(0,32,32);
+		}
+}
+
+var page = 0; //Used for changing pages in inventory panel
+
+function inventory_panel()
+{
+	myGameArea.clear();
+	var position_modifier = 1;
+	for(i == page * 10; i < player.slaves.length && i < page * 10 + 10; i++)
+	{
+		display_text(100,50 * position_modifier,"Strength: " + player.slaves[i].strength + " Toughness: " + player.slaves[i].toughness)
+	}
+}
+
+function display_text(x,y,text) //Displays text in a chosen location. Ease of use function
+{
+	var ctx = myGameArea.canvas.getContext("2d");
+	ctx.fillText(text,x,y);
+}
+
+function information_panel() //Displays data relevant to the tile. Might need to rework the data to appear to the right of the overworld map for prettiness. 
+{
+	myGameArea.clear();
+	for(i = 0;i < world_map.tiles.length;i++)
+	{
+		if(world_map.tiles[i].x == player.x && world_map.tiles[i].y == player.y)
+		{
+			if(world_map.tiles[i].ref == VILLAGE)
+			{
+				display_text(100,100,"population: " + world_map.tiles[i].loc_info.loc_data.population);
+				display_text(100,150,"guards: " + world_map.tiles[i].loc_info.loc_data.guards);
+				display_text(100,200,"valuable targets: " + world_map.tiles[i].loc_info.loc_data.priority.length)
+				display_text(100,250,"Wealth: " + world_map.tiles[i].loc_info.loc_data.wealth)
+			}
+		}
+	}
+		
+	if(myGameArea.keys && myGameArea.keys[13])
+	{
+		mode = OVER_WORLD
+	}
+}
+
+function updateGameArea() 
+{
+	ticks += 5;
+	switch(mode)
+	{
+		case OVER_WORLD:
+			over_world();
+			break;
+		case CHARACTER_CREATION:
+			char_creation();
+			break;
+		case INFORMATION:
+			information_panel();
+			break;
+		case INVENTORY:
+			inventory_panel();
+			break;
 	}
 }
 
@@ -273,11 +540,13 @@ function check_array(achk,x,y)
 	
 	}
 }
-
+ 
 function getMousePos(event)
 {
 	var x = event.x - myGameArea.canvas.offsetLeft;
 	var y = event.y - myGameArea.canvas.offsetTop;
+	
+	//CHARACTER CREATION
 	if(mode == CHARACTER_CREATION)
 	{
 		var selected = check_array(arrows,x,y);
@@ -336,7 +605,40 @@ function getMousePos(event)
 			player.build.bottom.imagge = orc_lower[lower];
 		}
 	}
+	if(mode == OVER_WORLD)
+	{
+		for(i = 0;i < mouse_pieces.length;i++)
+		{
+			if(mouse_pieces[i].Collide(x,y))
+			{
+				if(i == CLICK_BAG)
+				{
+					mode == INVENTORY;
+				}
+				if(i == CLICK_SCROLL)
+				{
+					mode = INFORMATION;
+				}
+			}
+		}
+	}
 }
+
+function create_canvas(index,smoothing)
+{
+	this.canvas = document.createElement("canvas");
+	this.start = function ()
+	{
+		this.canvas.width = SCREEN_WIDTH;
+		this.canvas.height = SCREEN_HEIGHT;
+		this.canvas.zIndex = index;
+		this.context = this.canvas.getContext("2d");
+		this.context = this.canvas.imageSmoothingEnabled = smoothing;
+		document.body.insertBefore(this.canvas,document.body.childNodes[0]);
+	}
+}
+
+var background = new create_canvas()
 
 var myGameArea = {
     canvas : document.createElement("canvas"),
@@ -346,10 +648,13 @@ var myGameArea = {
         this.context = this.canvas.getContext("2d");
 		this.context.imageSmoothingEnabled = false;
         document.body.insertBefore(this.canvas, document.body.childNodes[0]);
+
         this.interval = setInterval(updateGameArea, TICK_SPEED);
 		arrows = new arrow_group(SCREEN_WIDTH/2 - 128,SCREEN_HEIGHT/2 - 256,3,248,129);
-		create_player(0,128,128);	
+		create_player(0,128,128);
 		mode = CHARACTER_CREATION;
+		gui_items = new Array();
+		
 		this.canvas.addEventListener("mousedown",getMousePos,false)
         window.addEventListener('keydown', function (e) {
             myGameArea.keys = (myGameArea.keys || []);
@@ -366,9 +671,6 @@ var myGameArea = {
 
 function startGame() {
     myGameArea.start();
-	//myGamePiece[1] = new component(30,30,"blue",100,200,false);
-	//myGamePiece[2] = new component(30, 30, "red", 10, 300,false);
-	//myGamePiece[3] = new component(30, 30, "red", 10, 300,false);
 }
 startGame();
 
