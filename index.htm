@@ -7,6 +7,9 @@
 </head>
 <body>
  
+ <script type="text/javascript" src="name.js"></script>
+ <script type="text/javascript" src="commoner_name.js"></script>
+ 
 <script>
 /*
 canvas {
@@ -143,14 +146,6 @@ function new_player(player_build,x,y) //Stores data revalent to the player. Shou
 		this.slaves = new Array()
 		this.addSlave = function(slave)
 		{
-			if(slave.length)
-			{
-				for(i = 0; i < slave.length; i++)
-				{
-					this.slaves.push(slave[i]);
-					return;
-				}
-			}
 			this.slaves.push(slave)
 		}
 }
@@ -176,6 +171,7 @@ function create_player(weapon,width,height) //Used to create a player.
 function person(priority) //Creates a generic person. Priority determines if they are more valuable.
 {
 	this.gender = Math.floor((Math.random() * 2) + 1);
+	this.name = generate_name('common')
 	if(this.gender == 1)
 	{
 		this.gender = true;
@@ -469,14 +465,31 @@ function char_creation() //Character creation screen.
 }
 
 var page = 0; //Used for changing pages in inventory panel
-
+var update = true; //So text doesn't render over and over, slowing things down and making it look ugly
 function inventory_panel()
 {
-	myGameArea.clear();
-	var position_modifier = 1;
-	for(i == page * 10; i < player.slaves.length && i < page * 10 + 10; i++)
+	var position_modifier = 1
+	arrows = new arrow_group(500,300,1,50,100)
+	if(update)
 	{
-		display_text(100,50 * position_modifier,"Strength: " + player.slaves[i].strength + " Toughness: " + player.slaves[i].toughness)
+		for(i = 0;i < arrows.arrows.length;i++)
+		{
+			arrows.arrows[i].update();;
+		}
+		for(i = page * 10; i < player.slaves.length && i < page * 10 + 10; i++) //Places text on the screen relating to the chosen slave.
+		{
+			display_text(100,50 * position_modifier,player.slaves[i].name + ": " + "Strength: " + player.slaves[i].strength + " Toughness: " + player.slaves[i].toughness)
+			position_modifier++
+			console.log(i)
+		}
+		update = false; //Don't spam the screen
+	}
+	position_modifier = 1 //Reset the position modifier
+	if(myGameArea.keys && myGameArea.keys[13]) //If the enter key is pressed, return to the OVER_WORLD
+	{
+		mode = OVER_WORLD
+		update = true;
+		page = 0
 	}
 }
 
@@ -613,13 +626,38 @@ function getMousePos(event)
 			{
 				if(i == CLICK_BAG)
 				{
-					mode == INVENTORY;
+					mode = INVENTORY;
+					myGameArea.clear()
+					return
 				}
 				if(i == CLICK_SCROLL)
 				{
 					mode = INFORMATION;
+					return
 				}
 			}
+		}
+	}
+	if(mode == INVENTORY)
+	{
+		var selected = check_array(arrows,x,y)
+		if(selected == 0)
+		{
+			if(page - 1 > -1)
+			{
+				page--
+			}
+				myGameArea.clear()
+				update = true;
+		}
+		if(selected == 1)
+		{
+		if(10 * page <= player.slaves.length)
+		{
+			page++
+		}
+			myGameArea.clear()
+			update = true
 		}
 	}
 }
