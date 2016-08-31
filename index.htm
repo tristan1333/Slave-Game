@@ -79,11 +79,15 @@ orc_body[0] = new Image();
 orc_body[0].src = "./images/parts/body_parts/orc/orc_body.png";
 orc_body[1] = new Image();
 orc_body[1].src = "./images/parts/body_parts/orc/orc_body_sash.png"
+orc_body[2] = new Image();
+orc_body[2].src = "./images/parts/body_parts/orc/orc_body_armour.png"
 
 orc_lower[0] = new Image();
 orc_lower[0].src = "./images/parts/body_parts/orc/orc_legs.png";
 orc_lower[1] = new Image();
 orc_lower[1].src = "./images/parts/body_parts/orc/orc_legs_tunic.png";
+orc_lower[2] = new Image();
+orc_lower[2].src = "./images/parts/body_parts/orc/orc_legs_armour.png";
 
 orc_head[0] = new Image();
 orc_head[0].src = "./images/parts/body_parts/orc/orc_hair.png";
@@ -213,8 +217,13 @@ function village() //Creates a village which is stored inside a tiles loc_dets
 {
 	this.population = Math.floor((Math.random() * 1000) + 100); 
 	this.wealth = Math.floor((Math.random() * 10) + 1);
-	this.guards = Math.round(this.population/Math.floor((Math.random() * 5)) - this.wealth);
-	var priority_targets = Math.floor((Math.random() * 10) + 1);
+	var guard_mod = Math.floor((Math.random() * 2) + 10) - this.wealth
+	if(guard_mod < 2)
+	{
+		guard_mod = Math.floor((Math.random() * 2) + 4)
+	}
+	this.guards = Math.floor(this.population/guard_mod) ;
+	var priority_targets = Math.floor((Math.random() * 2) + 10);
 	this.priority = new Array();
 	for(counter = 0;counter != priority_targets;counter++)
 	{
@@ -417,6 +426,22 @@ function over_world() //Draws the overworld and interacts accordingly.
 			if (player.y < world_map.height && myGameArea.keys && myGameArea.keys[40] || myGameArea.keys && player.y < world_map.height && myGameArea.keys[83]) {player.y++} //DOWN/S
 			last_press = ticks;
 			myGameArea.clear()
+			var tile
+			for(i = 0;i < world_map.tiles.length;i++)
+			{
+				if(world_map.tiles[i].x == player.x && world_map.tiles[i].y == player.y)
+				{
+					tile = world_map.tiles[i]
+					break;
+				}
+		}
+		if(tile.ref == VILLAGE)
+		{
+				display_text(SCREEN_WIDTH/1.75,SCREEN_HEIGHT/4,"population: " + tile.loc_info.loc_data.population);
+				display_text(SCREEN_WIDTH/1.75,SCREEN_HEIGHT/4 + 50,"guards: " + tile.loc_info.loc_data.guards);
+				display_text(SCREEN_WIDTH/1.75,SCREEN_HEIGHT/4 + 100,"valuable targets: " + tile.loc_info.loc_data.priority.length)
+				display_text(SCREEN_WIDTH/1.75,SCREEN_HEIGHT/4 + 150,"Wealth: " + tile.loc_info.loc_data.wealth)
+		}
 				for(i = 0; i < active_map_piece.length; i++)
 				{
 				active_map_piece[i].update();
@@ -711,7 +736,6 @@ function startGame() {
     myGameArea.start();
 }
 startGame();
-
 </script>
 </body>
 </html>
