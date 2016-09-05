@@ -19,6 +19,77 @@ canvas {
 */
 //Globals
 
+function stat_block(movement_speed,hit_points) //WORK IN PROGRESS, NOT CURRENTLY USED
+{
+	this.movement_speed;
+	this.hit_points = hit_points;
+	this.inventory = new Array();
+	this.power = 0;
+	this.reach = 1;
+	this.wep_cost = 1;
+	this.d_type = CLUBBING;
+	this.worn = new Array();
+	
+	this.equip = function(inventory_obj) //An integer. Searches through inventory.
+	{
+		for(i = 0; i < this.worn.length; i++)
+		{
+			if(this.worn[i].ID == this.inventory[inventory_obj].ID)
+			{
+				return;
+			}
+		}
+		this.worn.push(this.inventory[inventory_obj]);
+		if(this.inventory[inventory_obj].ID == "Weapon")
+		{
+				this.power += this.inventory[inventory_obj].stats.power;
+				this.reach += this.inventory[inventory_obj].stats.reach;
+				this.speed += this.inventory[inventory_obj].stats.speed;
+				this.d_type = this.inventory[inventory_obj].stats.d_type;
+		}
+		this.inventory.splice(inventory_obj,1);
+	}
+	
+	this.unequip = function(inventory_obj) //Integer, reference to array
+	{
+		this.inventory.push(this.worn[inventory_obj]);
+		this.worn.splice(inventory_obj,1);
+	}
+	
+	this.add_to_inventory = function(ota)//Object to add, of type object
+	{
+		this.inventory.push(ota);
+	}
+}
+
+var SLASHING = 0;
+var CLUBBING = 1;
+var PIERCING = 2;
+
+function weapon_object(d_type,power,speed,reach)
+{
+	this.d_type = d_type;
+	this.speed = speed;
+	this.power = power;
+	this.reach = reach;
+}
+
+function object(name,ID,stats) //Things the player picks up and equips, enemies too.
+{
+	this.ID = ID; //string
+	this.stats = stats
+	this.name = name
+	this.UID; //Unique Identifier that is set for the sake of equipping and unequipping items. ID is used for what TYPE of item it is, this is what makes the item unique
+}
+
+var long_sword = new object("Long Sword",1,new weapon_object(SLASHING,20,0,0))//(SLASHING,20,0,0)
+var mace = new object("Mace",1,new weapon_object(CLUBBING,40,-2,0));//CLUBBING,40,-2,0
+var axe = new object("Axe",1,new weapon_object(SLASHING,30,-2,0));
+var spear = new object("Spear",1,new weapon_object(PIERCING,25,-1,1));
+
+var peasant = new stat_block(2,50);
+var player_base_stats = new stat_block(3,300)
+// END WORK IN PROGRESS STUFF
 function mouse_piece(x,y,w,h) //Used to define parts where the mouse can be clicked and reacted to. Could be put inside components, but meh. 
 {
 	this.x = x;
@@ -38,25 +109,38 @@ function mouse_piece(x,y,w,h) //Used to define parts where the mouse can be clic
 var body = 0;
 var head = 0;
 var lower = 0;
+
 var CLICK_BAG = 0;
 var CLICK_SCROLL = 1;
 var CHARACTER_CREATION = 1;
 var INVENTORY = 2;
 var INFORMATION = 3;
+var COMBAT = 4;
+
 var GRASS = 0;
 var GRASS_TACTICAL = 1;
+var WALL_WOOD = 2;
+var FLOOR_WOOD = 3;
+var BLACK = 4;
+
 var ARROW_LEFT = 0;
 var ARROW_RIGHT = 1;
+
 var SCREEN_WIDTH = 1200;
 var SCREEN_HEIGHT = 700;
+
 var active_map_piece = new Array();
 var tile_array = new Array();
 var axe_img = new Image();
+
 var PLAIN = 1;
 var VILLAGE = 2;
 var MOUNTAIN = 3;
 var FOREST = 4;
 var CASTLE = 5;
+
+var combat_map;
+
 var mouse_pieces = new Array();
 
 axe_img.src = "./images/parts/weapons/axe.png";
@@ -98,6 +182,12 @@ tile_array[0] = new Image();
 tile_array[0].src = "./images/tiles/grass_tile.png";
 tile_array[1] = new Image();
 tile_array[1].src = "./images/tiles/grass_tile_tactical.png";
+tile_array[2] = new Image();
+tile_array[2].src = "./images/tiles/wall_tile_wood.png";
+tile_array[3] = new Image();
+tile_array[3].src = "./images/tiles/floor_tile_wood.png";
+tile_array[4] = new Image();
+tile_array[4].src = "./images/tiles/black_tile.png";
 
 var icon_array = new Array();
 icon_array[VILLAGE] = new Image();
@@ -146,12 +236,20 @@ function new_player(player_build,x,y) //Stores data revalent to the player. Shou
 {
 		this.x = x;
 		this.y = y;
+		this.battle_x;
+		this.battle_y;
 		this.build = player_build;
 		this.slaves = new Array()
 		this.addSlave = function(slave)
 		{
 			this.slaves.push(slave)
 		}
+		this.stats = new stat_block(4,300);
+		this.stats.add_to_inventory(long_sword);
+		this.stats.add_to_inventory(axe);
+		this.stats.add_to_inventory(spear);
+		this.stats.add_to_inventory(mace);
+		this.stats.equip(1);
 }
 
 var player; //Pretty sure this get's used later on
@@ -323,6 +421,173 @@ function map(width,height) //A map built up of tiles.
 	}
 }
 
+function battle_tile(x,y,tile_type)
+{
+	this.x = x;
+	this.y = y;
+	this.tile_type = tile_type
+}
+
+function battle_obstacle(x,y,tile_type)
+{
+	this.x = x;
+	this.y = y;
+	this.tile_type = tile_type
+}
+
+function generate_village_map(vtd,size) //Village to draw
+{ 
+	var mtd = new Array() //Map to draw
+	var x = 1;
+	var y = 1;
+	var houses = size / 5;
+	var quit = false;
+	var house_change = 800;
+	for(i = 0;!quit;i++)
+	{
+		if(mtd[i] != null )
+		{
+			continue;
+		}
+		var tile_type
+		if(mtd[i] == null)
+		{
+			if(Math.floor((Math.random() * house_change) + 1) == 1)
+			{
+				house_change = 200;
+				var tempx = x;
+				var tempy = y;
+				var sizex = Math.floor((Math.random() * 8) + 3);
+				var sizey = Math.floor((Math.random() * 8) + 3);
+				var complete = false;
+				if(tempx + sizex < size && tempy + sizey < size)
+				{
+					for(c = i; !complete;c++) //This is the stuff for generating a house. c starts generating from the last point i started from.
+					{
+
+						if(tempx == x || tempy == y || tempx == x + sizex || tempy == y + sizey)
+						{
+							mtd[c] = new battle_tile(tempx,tempy,WALL_WOOD);
+						}
+						else
+						{
+							mtd[c] = new battle_tile(tempx,tempy,FLOOR_WOOD);
+							console.log("Should of placed a floor!");
+						}
+						tempx++;
+						if(tempx > sizex + x)
+						{
+							tempx = x;
+							tempy++;
+						}
+						if(tempy > sizey + y)
+						{
+							complete = true;
+							console.log("Generated a " + sizex + " by " + sizey + " house!");
+							continue;
+						}
+					}
+				}
+				if(complete)
+				{
+					continue;
+				}
+			}
+			house_change -= 1
+		}
+		tile_type = GRASS_TACTICAL
+
+		if(x > size)
+		{
+			x = 1;
+			y++;
+			console.log(y);
+		}
+		if(y > size)
+		{
+			quit = true;
+			continue;
+		}
+			mtd[i] = new battle_tile(x,y,tile_type);
+			x++;
+	}
+	return mtd;
+}
+
+function battle_map(type)
+{
+		if(type.ref == VILLAGE)
+		{
+			if(type.loc_info.loc_data.population > 500)
+			{
+				this.size = 100;
+			} 
+			else if(type.loc_info.loc_data.population > 300 && type.loc_info.loc_data.population < 500)
+			{
+				this.size = 75;
+			}
+			else
+			{
+				this.size = 50;
+			}
+				this.tiles = generate_village_map(type.loc_info.loc_data,this.size);
+		}
+		
+}
+
+
+function battle_unit(x,y,stats)
+{
+	this.battle_x = x;
+	this.battle_y = y;
+	this.movement_speed = stats.movement_speed
+}
+
+function draw_battle_map(mtd,c) //Map to draw, camera
+{
+	myGameArea.clear()
+	active_map_piece = [];
+	var radius = 4;
+	var last_x = -radius;
+	var last_y = -radius;
+	console.log(last_x + "," + last_y)
+	var exit = false;
+	while(!exit)
+	{
+		for(i = 0; i < mtd.tiles.length;i++)
+		{
+				if(last_x > radius) //Spread in 2 directions, from the middle tile. Thus, there is 2 radius + 1 for the middle
+				{
+					last_x = -4;
+					last_y++
+				}
+				if(last_y > radius)
+				{
+					for(c = 0; c < active_map_piece.length; c++)
+					{
+						active_map_piece[c].update()
+					}	
+					return;
+				}
+				if(mtd.tiles[i].x == c.battle_x + last_x && mtd.tiles[i].y == c.battle_y + last_y)
+				{
+					var placement_x = last_x + 5
+					var placement_y = last_y + 5
+					active_map_piece.push(new component(64,64,0,placement_x * 64 - 64, placement_y * 64 - 64,tile_array[mtd.tiles[i].tile_type],0));
+					last_x++;
+					i = 0;
+				}
+			continue;
+		}
+		var placement_x = last_x + 5;
+		var placement_y = last_y + 5;
+		active_map_piece.push(new component(64,64,0,placement_x * 64 - 64,placement_y * 64 - 64,tile_array[BLACK],0));
+		last_x++;
+	}
+}
+
+
+
 function draw_map(mtd) //Actually draws a map. 
 {
 	active_map_piece = [];
@@ -426,15 +691,7 @@ function over_world() //Draws the overworld and interacts accordingly.
 			if (player.y < world_map.height && myGameArea.keys && myGameArea.keys[40] || myGameArea.keys && player.y < world_map.height && myGameArea.keys[83]) {player.y++} //DOWN/S
 			last_press = ticks;
 			myGameArea.clear()
-			var tile
-			for(i = 0;i < world_map.tiles.length;i++)
-			{
-				if(world_map.tiles[i].x == player.x && world_map.tiles[i].y == player.y)
-				{
-					tile = world_map.tiles[i]
-					break;
-				}
-		}
+			var tile = get_player_tile()
 		if(tile.ref == VILLAGE)
 		{
 				display_text(SCREEN_WIDTH/1.75,SCREEN_HEIGHT/4,"population: " + tile.loc_info.loc_data.population);
@@ -489,6 +746,17 @@ function char_creation() //Character creation screen.
 		}
 }
 
+function begin_combat(tile)
+{
+	mode = COMBAT;
+	combat_map = new battle_map(tile);
+	player.battle_x = 1;
+	player.battle_y = 1;
+	player.build.move_piece(64 * 5 - 50,64 * 5 - 60)
+	draw_battle_map(combat_map,player);
+	player.build.update()
+}
+
 var page = 0; //Used for changing pages in inventory panel
 var update = true; //So text doesn't render over and over, slowing things down and making it look ugly
 function inventory_panel()
@@ -526,8 +794,9 @@ function display_text(x,y,text) //Displays text in a chosen location. Ease of us
 
 function information_panel() //Displays data relevant to the tile. Might need to rework the data to appear to the right of the overworld map for prettiness. 
 {
-	myGameArea.clear();
-	for(i = 0;i < world_map.tiles.length;i++)
+	myGameArea.clear(); //Clear the canvas
+	/*for(i = 0;i < world_map.tiles.length;i++) //Loop through the world tiles and identify what 
+											 //tiles the player is currently standing on, display information according to the tile that was found
 	{
 		if(world_map.tiles[i].x == player.x && world_map.tiles[i].y == player.y)
 		{
@@ -539,18 +808,51 @@ function information_panel() //Displays data relevant to the tile. Might need to
 				display_text(100,250,"Wealth: " + world_map.tiles[i].loc_info.loc_data.wealth)
 			}
 		}
-	}
+	}*/
 		
-	if(myGameArea.keys && myGameArea.keys[13])
+	if(myGameArea.keys && myGameArea.keys[13])//Check is the enter is pressed
 	{
 		mode = OVER_WORLD
 	}
 }
 
-function updateGameArea() 
+function get_player_tile()
 {
-	ticks += 5;
-	switch(mode)
+	for(i = 0;i < world_map.tiles.length;i++)
+		{
+			if(world_map.tiles[i].x == player.x && world_map.tiles[i].y == player.y)
+			{
+				return world_map.tiles[i]
+			}
+		}
+}
+
+function combat()
+{
+	var update = false;
+	if(last_press + 100 < ticks)
+	{
+		if (myGameArea.keys[37]  && player.battle_x - 1 > 0|| myGameArea.keys[65] && player.battle_x - 1 > 0)
+			{player.battle_x--;update = true;}
+		if (myGameArea.keys[39]  && player.battle_x + 1 <= combat_map.size|| myGameArea.keys[68] && player.battle_x + 1 <= combat_map.size)
+			{player.battle_x++;update = true;}
+		if (myGameArea.keys[38]  && player.battle_y - 1 > 0 || myGameArea.keys[87] && player.battle_y - 1 > 0) 
+			{player.battle_y--;update = true;} //UP/W
+		if (myGameArea.keys[40]  && player.battle_y + 1 <= combat_map.size|| myGameArea.keys[83] && player.battle_y + 1 <= combat_map.size) 
+			{player.battle_y++;update = true;} //DOWN/S
+		last_press = ticks;
+	}
+	if(update)
+	{
+		draw_battle_map(combat_map,player) //Calls myGameArea.clear()
+		player.build.update()
+	}
+}
+
+function updateGameArea() //The universal function.
+{
+	ticks += 5; //Used for timing purposes and clocks
+	switch(mode) //Depending on the world, perform a different action.
 	{
 		case OVER_WORLD:
 			over_world();
@@ -559,15 +861,22 @@ function updateGameArea()
 			char_creation();
 			break;
 		case INFORMATION:
-			information_panel();
+			if(get_player_tile().ref != VILLAGE)
+			{
+				mode  = OVER_WORLD;;
+				break;
+			}
+			begin_combat(get_player_tile());
 			break;
 		case INVENTORY:
 			inventory_panel();
 			break;
+		case COMBAT:
+			combat();
 	}
 }
 
-function check_array(achk,x,y)
+function check_array(achk,x,y) //Used for checking what's been clicked in an arrow array. Crude way to do it. I need to rebuild the engine.
 {
 	for(i = 0;i < achk.arrows.length;i++)
 	{
@@ -687,7 +996,7 @@ function getMousePos(event)
 	}
 }
 
-function create_canvas(index,smoothing)
+function create_canvas(index,smoothing) //Used to create a canvas.
 {
 	this.canvas = document.createElement("canvas");
 	this.start = function ()
@@ -701,25 +1010,26 @@ function create_canvas(index,smoothing)
 	}
 }
 
-var background = new create_canvas()
+var background = new create_canvas(0,false) //Creates the background
 
-var myGameArea = {
+var myGameArea = { //Stores all the stuff relevant to the game area. Basically the underlying thing for displaying images
     canvas : document.createElement("canvas"),
-    start : function() {
-        this.canvas.width = SCREEN_WIDTH;
-        this.canvas.height = SCREEN_HEIGHT;
-        this.context = this.canvas.getContext("2d");
-		this.context.imageSmoothingEnabled = false;
-        document.body.insertBefore(this.canvas, document.body.childNodes[0]);
+    start : function() { //Initialies the game area 
+        this.canvas.width = SCREEN_WIDTH;//Derr
+        this.canvas.height = SCREEN_HEIGHT;//Derr
+        this.context = this.canvas.getContext("2d"); //Get's the context of the canvas. 
+		this.context.imageSmoothingEnabled = false; //Give it a pixelated feel. Don't try to smooth images out.
+        document.body.insertBefore(this.canvas, document.body.childNodes[0]); //Appends the canvas to the body of the page
 
-        this.interval = setInterval(updateGameArea, TICK_SPEED);
-		arrows = new arrow_group(SCREEN_WIDTH/2 - 128,SCREEN_HEIGHT/2 - 256,3,248,129);
-		create_player(0,128,128);
-		mode = CHARACTER_CREATION;
-		gui_items = new Array();
+        this.interval = setInterval(updateGameArea, TICK_SPEED); //Rate
+		arrows = new arrow_group(SCREEN_WIDTH/2 - 128,SCREEN_HEIGHT/2 - 256,3,248,129); //Creates the arrows for the character creation screen
+		create_player(0,128,128); //Draws the player
+		mode = CHARACTER_CREATION; //Enters the character creation screen
+		gui_items = new Array(); //Initialises the gui_items
 		
-		this.canvas.addEventListener("mousedown",getMousePos,false)
-        window.addEventListener('keydown', function (e) {
+		this.canvas.addEventListener("mousedown",getMousePos,false)//Makes it "listen" for mouse clicks and call the relevant function 
+        //Listens for keydown and keyup
+		window.addEventListener('keydown', function (e) { 
             myGameArea.keys = (myGameArea.keys || []);
             myGameArea.keys[e.keyCode] = true;
         })
@@ -727,12 +1037,12 @@ var myGameArea = {
             myGameArea.keys[e.keyCode] = false; 
         })
     },
-    clear : function() {
+    clear : function() { //Clears the entire canvas
         this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
     }
 }
 
-function startGame() {
+function startGame() { //Eh could probly do without, kinda just here for sake of it.
     myGameArea.start();
 }
 startGame();
