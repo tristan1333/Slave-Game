@@ -40,11 +40,11 @@ function stat_block(movement_speed,hit_points) //WORK IN PROGRESS, NOT CURRENTLY
 			}
 		}
 		this.worn.push(this.inventory[inventory_obj]);
-		if(this.inventory[inventory_obj].ID == "Weapon")
+		if(this.inventory[inventory_obj].ID == WEAPON)
 		{
-				this.power += this.inventory[inventory_obj].stats.power;
-				this.reach += this.inventory[inventory_obj].stats.reach;
-				this.speed += this.inventory[inventory_obj].stats.speed;
+				this.power = this.inventory[inventory_obj].stats.power;
+				this.reach = this.inventory[inventory_obj].stats.reach;
+				this.speed = this.inventory[inventory_obj].stats.speed;
 				this.d_type = this.inventory[inventory_obj].stats.d_type;
 		}
 		this.inventory.splice(inventory_obj,1);
@@ -66,6 +66,8 @@ var SLASHING = 0;
 var CLUBBING = 1;
 var PIERCING = 2;
 
+var WEAPON = 1; //For use in inventory objects
+
 function weapon_object(d_type,power,speed,reach)
 {
 	this.d_type = d_type;
@@ -74,18 +76,20 @@ function weapon_object(d_type,power,speed,reach)
 	this.reach = reach;
 }
 
-function object(name,ID,stats) //Things the player picks up and equips, enemies too.
+function object(name,ID,stats,imgg) //Things the player picks up and equips, enemies too.
 {
 	this.ID = ID; //string
 	this.stats = stats
 	this.name = name
 	this.UID; //Unique Identifier that is set for the sake of equipping and unequipping items. ID is used for what TYPE of item it is, this is what makes the item unique
+	this.imgg = new Image();
+	this.imgg.src = imgg
 }
 
-var long_sword = new object("Long Sword",1,new weapon_object(SLASHING,20,0,0))//(SLASHING,20,0,0)
-var mace = new object("Mace",1,new weapon_object(CLUBBING,40,-2,0));//CLUBBING,40,-2,0
-var axe = new object("Axe",1,new weapon_object(SLASHING,30,-2,0));
-var spear = new object("Spear",1,new weapon_object(PIERCING,25,-1,1));
+var long_sword = new object("Long Sword",1,new weapon_object(SLASHING,20,0,0),"./images/parts/weapons/sword.png")//(SLASHING,20,0,0)
+var mace = new object("Mace",1,new weapon_object(CLUBBING,40,-2,0),"./images/parts/weapons/mace.png");//CLUBBING,40,-2,0
+var axe = new object("Axe",1,new weapon_object(SLASHING,30,-2,0),"./images/parts/weapons/axe.png");
+var spear = new object("Spear",1,new weapon_object(PIERCING,25,-1,1),"");
 
 var peasant = new stat_block(2,50);
 var player_base_stats = new stat_block(3,300)
@@ -238,22 +242,32 @@ function new_player(player_build,x,y) //Stores data revalent to the player. Shou
 		this.y = y;
 		this.battle_x;
 		this.battle_y;
+		this.stats = new stat_block(4,300);
+		this.stats.add_to_inventory(axe);
+		this.stats.add_to_inventory(long_sword);
+		this.stats.add_to_inventory(mace);
+		this.stats.equip(1);
+		this.stats.unequip(0);
 		this.build = player_build;
 		this.slaves = new Array()
+		this.equip = function(ota)
+		{
+			this.stats.equip(ota);
+			for(i = 0;i < this.stats.worn.length;i++)
+			{
+				if(this.stats.worn[i].ID == WEAPON)
+				{
+					this.build.weapon = new component(32,32,0,0,0,this.stats.worn[i].imgg,0);
+				}
+			}
+		}
 		this.addSlave = function(slave)
 		{
 			this.slaves.push(slave)
 		}
-		this.stats = new stat_block(4,300);
-		this.stats.add_to_inventory(long_sword);
-		this.stats.add_to_inventory(axe);
-		this.stats.add_to_inventory(spear);
-		this.stats.add_to_inventory(mace);
-		this.stats.equip(1);
 }
 
-var player; //Pretty sure this get's used later on
-
+var player; //The player object. Used in alot of places.
 function weapon(pixel_offset,core) //Used for defining what a weapon looks like
 {
 	this.core = core;
@@ -262,12 +276,13 @@ function weapon(pixel_offset,core) //Used for defining what a weapon looks like
 
 function create_player(weapon,width,height) //Used to create a player. 
 {
-	var axe = new component(width,height,0,0,0,axe_img,0);
-	var player_top = new component(width,height,0,0,0,orc_body[body],0);
-	var player_bottom = new component(width,height,0,0,0,orc_lower[lower],0);
-	var player_head = new component(width,height,0,0,0,orc_head[head],0);
-	var build_player = new person_build(player_top,player_bottom,player_head,1,1,axe);
-	player = new new_player(build_player,1,1); // Find Coordinates of both objects. Determine distance between each.( Distance Formula). Determine direction, (Tan theta). Determine coordinates surrounding points. Draw line to original point. if hit surrounding points :D
+		console.log(weapon)
+		var wtd = new component(width,height,0,0,0,weapon.imgg,0);
+		var player_top = new component(width,height,0,0,0,orc_body[body],0);
+		var player_bottom = new component(width,height,0,0,0,orc_lower[lower],0);
+		var player_head = new component(width,height,0,0,0,orc_head[head],0);
+		var build_player = new person_build(player_top,player_bottom,player_head,1,1,wtd);
+		player = new new_player(build_player,1,1);
 }
 
 function person(priority) //Creates a generic person. Priority determines if they are more valuable.
@@ -327,6 +342,7 @@ function village() //Creates a village which is stored inside a tiles loc_dets
 	{
 		this.priority[counter] = new person(true);
 	}
+	this.map;
 }
 
 function loc_dets(loc_type)  //Contains details about the location. If it is a village, it will store revelant information to being a village.
@@ -387,7 +403,7 @@ function tile(x,y,type,type_ref) //A base tile. Place these on the map.
 		}
 }
 
-function map(width,height) //A map built up of tiles.
+function map(width,height) //A map built up of tiles. This map is specifically used for the Over_World
 {
 	this.width = width;
 	this.height = height;
@@ -421,21 +437,21 @@ function map(width,height) //A map built up of tiles.
 	}
 }
 
-function battle_tile(x,y,tile_type)
+function battle_tile(x,y,tile_type) //These are slotted into a battle_map
 {
 	this.x = x;
 	this.y = y;
 	this.tile_type = tile_type
 }
 
-function battle_obstacle(x,y,tile_type)
+function battle_obstacle(x,y,tile_type) //TODO item. To be used for walls blocking movement
 {
 	this.x = x;
 	this.y = y;
 	this.tile_type = tile_type
 }
 
-function generate_village_map(vtd,size) //Village to draw
+function generate_village_map(vtd,size) //Generates a village map based off a village
 { 
 	var mtd = new Array() //Map to draw
 	var x = 1;
@@ -742,14 +758,30 @@ function char_creation() //Character creation screen.
 			draw_map(world_map);
 			mouse_pieces.push(new mouse_piece(gui_items[1].x,gui_items[1].y,gui_items[1].width,gui_items[1].height))
 			mouse_pieces.push(new mouse_piece(gui_items[0].x,gui_items[0].y,gui_items[0].width,gui_items[0].height))
-			create_player(0,32,32);
+			create_player(axe,32,32);
 		}
 }
 
 function begin_combat(tile)
 {
 	mode = COMBAT;
-	combat_map = new battle_map(tile);
+	if(tile.loc_info.loc_data.map == null)
+	{
+		console.log("FUCK")
+		for(i = 0;world_map.tiles.length > i;i++)
+		{
+			if(world_map.tiles[i].ref == tile.ref && tile.ref == VILLAGE)
+			{
+				console.log("FUCK1.5")
+				if(world_map.tiles[i].x == tile.x && world_map.tiles[i].y == tile.y)
+				{
+					console.log("FUCK2")
+					world_map.tiles[i].loc_info.loc_data.map= new battle_map(tile);
+				}
+			}
+		}
+	}
+	combat_map = tile.loc_info.loc_data.map;
 	player.battle_x = 1;
 	player.battle_y = 1;
 	player.build.move_piece(64 * 5 - 50,64 * 5 - 60)
@@ -757,8 +789,21 @@ function begin_combat(tile)
 	player.build.update()
 }
 
+function exit_combat()
+{
+	mode = OVER_WORLD;
+	active_map_piece = [];
+	draw_map(world_map);
+}
+
 var page = 0; //Used for changing pages in inventory panel
 var update = true; //So text doesn't render over and over, slowing things down and making it look ugly
+
+function new_inventory_panel()
+{
+	
+}
+
 function inventory_panel()
 {
 	var position_modifier = 1
@@ -832,6 +877,8 @@ function combat()
 	var update = false;
 	if(last_press + 100 < ticks)
 	{
+		if(myGameArea.keys && myGameArea.keys[13]) //If the enter key is pressed, return to the OVER_WORLD
+			{exit_combat();return;}
 		if (myGameArea.keys[37]  && player.battle_x - 1 > 0|| myGameArea.keys[65] && player.battle_x - 1 > 0)
 			{player.battle_x--;update = true;}
 		if (myGameArea.keys[39]  && player.battle_x + 1 <= combat_map.size|| myGameArea.keys[68] && player.battle_x + 1 <= combat_map.size)
@@ -1023,7 +1070,7 @@ var myGameArea = { //Stores all the stuff relevant to the game area. Basically t
 
         this.interval = setInterval(updateGameArea, TICK_SPEED); //Rate
 		arrows = new arrow_group(SCREEN_WIDTH/2 - 128,SCREEN_HEIGHT/2 - 256,3,248,129); //Creates the arrows for the character creation screen
-		create_player(0,128,128); //Draws the player
+		create_player(axe,128,128); //Draws the player
 		mode = CHARACTER_CREATION; //Enters the character creation screen
 		gui_items = new Array(); //Initialises the gui_items
 		
